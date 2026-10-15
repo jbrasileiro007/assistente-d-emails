@@ -440,12 +440,41 @@ async function run() {
 
   try {
     // Todo o processamento principal é feito localmente no navegador.
-    const resultado = tratarLocal({
+
+const apiResponse = await fetch(
+  "https://assistente-emails-api.onrender.com,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
       assunto,
       email,
       contexto,
       modo
-    });
+    })
+  }
+);
+
+if (!apiResponse.ok) {
+  const dadosErro = await apiResponse.json().catch(() => ({}));
+
+  const mensagens = {
+    api_not_configured: "A chave do Gemini não está configurada no Render.",
+    rate_limited: "Limite de uso atingido. Tente novamente mais tarde.",
+    gemini_error: "Erro ao processar com o Gemini. Verifique a configuração da API.",
+    text_too_large: "O texto enviado é muito grande."
+  };
+
+  throw new Error(
+    mensagens[dadosErro.error] ||
+    "Não foi possível processar o texto. Tente novamente."
+  );
+}
+
+const resultado = await apiResponse.json();
+
 
     $("rsubj").value = resultado.assunto;
     $("res").value = resultado.corpo;
