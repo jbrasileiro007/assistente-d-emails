@@ -6,8 +6,11 @@ const path = require("path");
 const PORT = process.env.PORT || 10000;
 const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-const ALLOWED_ORIGIN =
-  process.env.ALLOWED_ORIGIN || "https://jbrasileiro007.github.io";
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "https://jbrasileiro007.github.io";
+const normalizeOrigin = (origin) =>
+  (origin || "").replace(/\/+$/, "");
+
+const allowedOrigin = normalizeOrigin(ALLOWED_ORIGIN);
 
 const RULES = `
 Você é um assistente de comunicação institucional em português brasileiro.
@@ -51,9 +54,9 @@ function cors(req, res) {
 
   res.setHeader("Vary", "Origin");
 
-  if (origin === ALLOWED_ORIGIN) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
+if (origin && normalizeOrigin(origin) === allowedOrigin) {
+  res.setHeader("Access-Control-Allow-Origin", origin);
+}
 
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -158,12 +161,12 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
 
   if (req.method === "OPTIONS") {
-    if (
-      req.headers.origin &&
-      req.headers.origin !== ALLOWED_ORIGIN
-    ) {
-      return send(res, 403, { error: "origin_not_allowed" });
-    }
+  if (
+  req.headers.origin &&
+  normalizeOrigin(req.headers.origin) !== allowedOrigin
+) {
+  return send(res, 403, { error: "origin_not_allowed" });
+}
 
     res.writeHead(204);
     return res.end();
@@ -192,11 +195,11 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (
-    req.headers.origin &&
-    req.headers.origin !== ALLOWED_ORIGIN
-  ) {
-    return send(res, 403, { error: "origin_not_allowed" });
-  }
+  req.headers.origin &&
+  normalizeOrigin(req.headers.origin) !== allowedOrigin
+) {
+  return send(res, 403, { error: "origin_not_allowed" });
+}
 
   if (!API_KEY) {
     return send(res, 503, { error: "api_not_configured" });
