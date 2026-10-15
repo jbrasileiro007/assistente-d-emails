@@ -126,11 +126,17 @@ ${email}
     }
   );
 
-  if (!response.ok) {
-    const err = new Error("Falha na API do Gemini.");
-    err.status = response.status;
-    throw err;
-  }
+  
+if (!response.ok) {
+  const detalhe = await response.text();
+
+  console.error("Erro Gemini HTTP:", response.status);
+  console.error("Detalhes Gemini:", detalhe.slice(0, 1500));
+
+  const err = new Error("Falha na API do Gemini.");
+  err.status = response.status;
+  throw err;
+}
 
   const data = await response.json();
 
