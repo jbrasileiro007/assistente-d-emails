@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Assistente de E-mails</title>
+<style>
+:root{color-scheme:light;--g9:#14532D;--g8:#166534;--g6:#16A34A;--g1:#E8F5EC;--bg:#F3F9F5;--surface:#FFFFFF;--tx:#12261A;--mut:#5B6B64;--bd:#D5E6DA;--warn-bg:#FEF9C3;--warn-tx:#713F12;--err-bg:#FEE2E2;--err-tx:#991B1B;--hd:#14532D;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media not all{:root:not([data-theme="light"]){--bg:#0B1A12;--surface:#112219;--tx:#E6F4EA;--mut:#94A3B8;--bd:#24402F;--g1:#10281A;--warn-bg:#3A3208;--warn-tx:#FDE68A;--err-bg:#3B1414;--err-tx:#FCA5A5;--hd:#0E3B22;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1A12;--surface:#112219;--tx:#E6F4EA;--mut:#94A3B8;--bd:#24402F;--g1:#10281A;--warn-bg:#3A3208;--warn-tx:#FDE68A;--err-bg:#3B1414;--err-tx:#FCA5A5;--hd:#0E3B22;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(160deg,#E4F5EB 0%,#EEF8F4 45%,#E6F2F7 100%) fixed;background-color:var(--bg);min-height:100vh;color:var(--tx);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5}
+header{background:linear-gradient(120deg,#BFE6CF 0%,#D8F0E2 55%,#DDEFF3 100%);color:var(--g9);padding:18px 20px;border-bottom:1px solid #B5DCC4}
+header h1{margin:0;font-size:1.25rem;font-weight:650}
+header p{margin:2px 0 0;font-size:.9rem;opacity:.85}
+main{max-width:1150px;margin:0 auto;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:820px){main{grid-template-columns:1fr;padding:14px}}
+.card{background:linear-gradient(180deg,#FFFFFF 0%,#F6FCF8 100%);border:1px solid #CDE8D7;border-radius:16px;padding:18px;min-width:0;box-shadow:0 2px 10px rgba(95,170,130,.10)}
+.card h2{margin:0 0 12px;font-size:1rem;color:var(--g8)}
+@media not all{:root:not([data-theme="light"]) .card h2{color:#86EFAC}}
+label{display:block;font-size:.85rem;font-weight:600;margin:12px 0 4px}
+label small{font-weight:400;color:var(--mut)}
+input,textarea,select{width:100%;font:inherit;color:var(--tx);background:var(--surface);border:1px solid var(--bd);border-radius:10px;padding:10px 12px}
+textarea{resize:vertical;min-height:120px}
+#orig{min-height:200px}#res{min-height:280px}
+input:focus,textarea:focus,select:focus{outline:2px solid #9ADBB6;outline-offset:1px;border-color:#8FD3AC}
+.modes{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.modes label{margin:0;font-weight:500;display:flex;align-items:center;gap:6px;border:1px solid var(--bd);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:.85rem;transition:background .15s}
+.modes input{width:auto;margin:0;accent-color:var(--g6)}
+.modes label:has(input:checked){background:linear-gradient(135deg,#D3F0DF,#E3F4F0);border-color:#8FD3AC;color:var(--g9)}
+@media not all{:root:not([data-theme="light"]) .modes label:has(input:checked){color:#86EFAC}}
+.btn{font:inherit;font-weight:600;border:1px solid #8FD3AC;background:linear-gradient(135deg,#B6E8CB,#8FD6AE);color:var(--g9);border-radius:10px;padding:10px 16px;cursor:pointer;transition:filter .15s,transform .05s}
+.btn:hover{filter:brightness(.96) saturate(1.1)}.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.sec{background:#FFFFFFAA;color:var(--g8);border-color:#CDE8D7}
+.btn.sec:hover{background:#E3F4EA}
+@media not all{:root:not([data-theme="light"]) .btn.sec{color:#86EFAC}}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.btn.main{width:100%;margin-top:16px;padding:12px}
+.note{font-size:.8rem;color:var(--mut);margin-top:10px;background:linear-gradient(135deg,#EAF7EF,#E8F3F6);border-radius:10px;padding:8px 12px}
+.msg{border-radius:10px;padding:10px 12px;font-size:.88rem;margin-top:12px}
+.msg.err{background:var(--err-bg);color:var(--err-tx)}
+.msg.warn{background:var(--warn-bg);color:var(--warn-tx)}
+.msg.ok{background:linear-gradient(135deg,#DDF3E6,#E6F4F1);color:var(--g9)}
+@media not all{:root:not([data-theme="light"]) .msg.ok{color:#86EFAC}}
+.empty{color:var(--mut);font-size:.9rem;padding:24px 8px;text-align:center;border:1px dashed #B9DEC7;border-radius:10px;background:linear-gradient(135deg,#F4FBF7,#EEF6F8)}
+.spin{width:16px;height:16px;border:2px solid var(--g9);border-right-color:transparent;border-radius:50%;display:inline-block;vertical-align:-3px;margin-right:8px;animation:r .7s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+.hidden{display:none}
+.fade{animation:f .25s ease}@keyframes f{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+.ex{margin-top:10px;font-size:.8rem;color:var(--mut)}
+.ex button{font:inherit;font-size:.78rem;border:1px solid var(--bd);background:transparent;color:var(--mut);border-radius:999px;padding:3px 10px;cursor:pointer;margin:2px 2px 0 0}
+.ex button:hover{border-color:var(--g6);color:var(--g8)}
+footer{text-align:center;color:var(--mut);font-size:.78rem;padding:4px 16px 24px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Assistente de E-mails</h1>
+  <p>Comunicação institucional clara, formal e eficiente</p>
+</header>
+<main>
+  <section class="card" aria-labelledby="t1">
+    <h2 id="t1">E-mail original</h2>
+    <label for="subj">Assunto <small>(opcional)</small></label>
+    <input id="subj" type="text" placeholder="Ex.: Reclamação sobre cobrança">
+    <label for="orig">Texto a ser tratado <small>(qualquer texto)</small></label>
+    <textarea id="orig" placeholder="Cole aqui o texto original..."></textarea>
+    <label for="ctx">Contexto ou orientações <small>(opcional)</small></label>
+    <textarea id="ctx" style="min-height:70px" placeholder="Ex.: destinatário é o consumidor; ainda não há prazo confirmado."></textarea>
+    <label>Tipo de tratamento</label>
+    <div class="modes" id="modes">
+      <label><input type="radio" name="mode" value="formalizar" checked>Formalizar</label>
+      <label><input type="radio" name="mode" value="simplificar">Simplificar</label>
+      <label><input type="radio" name="mode" value="corrigir">Corrigir</label>
+      <label><input type="radio" name="mode" value="clareza">Melhorar clareza</label>
+      <label><input type="radio" name="mode" value="cordial">Tornar mais cordial</label>
+      <label><input type="radio" name="mode" value="resumir">Resumir</label>
+      <label><input type="radio" name="mode" value="resposta">Criar resposta</label>
+    </div>
+    <button class="btn main" id="go">Tratar e-mail</button>
+    <div id="err" class="msg err hidden" role="alert"></div>
+    <div class="note">Remova dados pessoais desnecessários antes de usar. O conteúdo não é armazenado pela ferramenta e nenhum e-mail é enviado automaticamente.</div>
+    <div class="ex">Exemplos de teste:
+      <button data-ex="1">Formalização</button><button data-ex="3">Correção</button><button data-ex="4">Criar resposta</button><button data-ex="5">Preservar dados</button>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="t2">
+    <h2 id="t2">Resultado</h2>
+    <div id="empty" class="empty">Insira o e-mail ao lado e clique em “Tratar e-mail” para ver a versão revisada.</div>
+    <div id="out" class="hidden fade">
+      <div id="done" class="msg ok" role="status">Tratamento concluído. Revise o texto antes de utilizá-lo.</div>
+      <div id="warn" class="msg warn hidden"></div>
+      <label for="rsubj">Assunto sugerido</label>
+      <input id="rsubj" type="text">
+      <label for="res">Texto revisado <small>(editável)</small></label>
+      <textarea id="res"></textarea>
+      <div class="row">
+        <button class="btn" id="cpT">Copiar texto</button>
+        <button class="btn sec" id="cpS">Copiar assunto</button>
+        <button class="btn sec" id="ed">Editar resultado</button>
+        <button class="btn sec" id="again">Tratar novamente</button>
+        <button class="btn sec" id="clr">Limpar campos</button>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>Ferramenta de apoio: o texto gerado por IA exige revisão humana antes do uso.</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const EX={
+1:{s:"",o:"Oi, recebemos sua reclamação e vamos ver isso. Aguarde.",m:"formalizar",c:""},
+3:{s:"",o:"Prezado consumidor, recebemos sua solicitacao e iremos analisar os documento enviado.",m:"corrigir",c:""},
+4:{s:"Andamento da solicitação",o:"O consumidor pergunta se recebeu uma atualização sobre sua solicitação.",m:"resposta",c:"Ainda não temos uma atualização confirmada."},
+5:{s:"",o:"oi, sobre o protocolo 2025/004517, o valor de R$ 1.249,90 deve ser devolvido ate 12/03/2026 conforme falamos. manda os docs",m:"formalizar",c:""}
+};
+let busy=false;
+function showErr(t){const e=$("err");e.textContent=t;e.classList.toggle("hidden",!t)}
+function setBusy(b){busy=b;const g=$("go");g.disabled=b;$("again").disabled=b;g.innerHTML=b?'<span class="spin"></span>Tratando...':"Tratar e-mail"}
+async function run(){
+  if(busy)return;
+  showErr("");
+  const orig=$("orig").value.trim(), ctx=$("ctx").value.trim(), subj=$("subj").value.trim();
+  const mode=document.querySelector('input[name=mode]:checked').value;
+  if(!orig){showErr("Preencha o conteúdo do e-mail antes de continuar.");$("orig").focus();return}
+  setBusy(true);
+  try{
+    const resp=await fetch("/api/tratar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({assunto:subj,email:orig,contexto:ctx,modo:mode})});
+    const j=await resp.json().catch(()=>({}));
+    if(!resp.ok)throw {code:j.code||"server"};
+    if(typeof j.corpo!=="string"||!j.corpo.trim())throw {code:"server"};
+    $("rsubj").value=j.assunto||subj||"";
+    $("res").value=j.corpo.trim();
+    const w=Array.isArray(j.avisos)?j.avisos.filter(Boolean):[];
+    const wb=$("warn");
+    if(w.length){wb.innerHTML="<strong>Conferir antes de usar:</strong> "+w.map(x=>String(x).replace(/</g,"&lt;")).join(" · ");wb.classList.remove("hidden")}else wb.classList.add("hidden");
+    $("empty").classList.add("hidden");
+    const o=$("out");o.classList.remove("hidden");o.classList.remove("fade");void o.offsetWidth;o.classList.add("fade");
+    o.scrollIntoView({behavior:"smooth",block:"nearest"});
+  }catch(e){
+    const c=e&&e.code;
+    showErr(c==="not_configured"?"A integração com a IA não está configurada no servidor. Peça ao responsável técnico para definir a chave de API (ANTHROPIC_API_KEY).":
+      c==="rate_limited"?"Muitas solicitações em sequência. Aguarde alguns instantes e tente novamente.":
+      "Não foi possível concluir o tratamento agora. Tente novamente em alguns instantes."+(e&&e.code?" (detalhe: "+e.code+")":""));
+  }finally{setBusy(false)}
+}
+async function copy(text,btn){
+  if(!text){return}
+  let ok=false;
+  try{await navigator.clipboard.writeText(text);ok=true}catch(_){
+    const t=document.createElement("textarea");t.value=text;t.style.position="fixed";t.style.opacity="0";document.body.appendChild(t);t.select();
+    try{ok=document.execCommand("copy")}catch(_){}t.remove();
+  }
+  const old=btn.textContent;btn.textContent=ok?"Copiado!":"Falha ao copiar";setTimeout(()=>btn.textContent=old,1600);
+}
+$("go").onclick=run;$("again").onclick=run;
+$("cpT").onclick=e=>copy($("res").value,e.target);
+$("cpS").onclick=e=>copy($("rsubj").value,e.target);
+$("ed").onclick=()=>{$("res").focus()};
+$("clr").onclick=()=>{["subj","orig","ctx","rsubj","res"].forEach(i=>$(i).value="");showErr("");$("out").classList.add("hidden");$("empty").classList.remove("hidden");document.querySelector('input[name=mode][value=formalizar]').checked=true};
+document.querySelectorAll("[data-ex]").forEach(b=>b.onclick=()=>{const x=EX[b.dataset.ex];$("subj").value=x.s;$("orig").value=x.o;$("ctx").value=x.c;document.querySelector(`input[name=mode][value=${x.m}]`).checked=true;showErr("")});
+</script>
+</body>
+</html>
