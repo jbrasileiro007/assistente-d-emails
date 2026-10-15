@@ -240,6 +240,7 @@ const server = http.createServer(async (req, res) => {
     const email = String(body.email || "").trim();
     const modo = String(body.modo || "");
 
+   
     if (!email || !MODES[modo]) {
       return send(res, 400, { error: "invalid_input" });
     }
@@ -252,7 +253,8 @@ const server = http.createServer(async (req, res) => {
     });
 
     return send(res, 200, result);
-  }   } catch (err) {
+
+  } catch (err) {
     console.error("Falha no processamento:", err.status || "sem status");
 
     if (
@@ -280,6 +282,7 @@ const server = http.createServer(async (req, res) => {
     return send(res, 502, { error: "gemini_error" });
   }
 });
+
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log("Servidor iniciado na porta " + PORT);
