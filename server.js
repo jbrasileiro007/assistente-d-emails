@@ -51,6 +51,8 @@ function send(res, status, data) {
 
 function cors(req, res) {
   const origin = req.headers.origin;
+  console.log("Origem recebida:", origin);
+console.log("Origem permitida:", allowedOrigin);
 
   res.setHeader("Vary", "Origin");
 
