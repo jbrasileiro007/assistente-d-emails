@@ -111,58 +111,451 @@ footer{text-align:center;color:var(--mut);font-size:.78rem;padding:4px 16px 24px
 <footer>Ferramenta de apoio: o texto gerado por IA exige revisão humana antes do uso.</footer>
 
 <script>
-const $=id=>document.getElementById(id);
-const EX={
-1:{s:"",o:"Oi, recebemos sua reclamação e vamos ver isso. Aguarde.",m:"formalizar",c:""},
-3:{s:"",o:"Prezado consumidor, recebemos sua solicitacao e iremos analisar os documento enviado.",m:"corrigir",c:""},
-4:{s:"Andamento da solicitação",o:"O consumidor pergunta se recebeu uma atualização sobre sua solicitação.",m:"resposta",c:"Ainda não temos uma atualização confirmada."},
-5:{s:"",o:"oi, sobre o protocolo 2025/004517, o valor de R$ 1.249,90 deve ser devolvido ate 12/03/2026 conforme falamos. manda os docs",m:"formalizar",c:""}
-};
-let busy=false;
-function showErr(t){const e=$("err");e.textContent=t;e.classList.toggle("hidden",!t)}
-function setBusy(b){busy=b;const g=$("go");g.disabled=b;$("again").disabled=b;g.innerHTML=b?'<span class="spin"></span>Tratando...':"Tratar e-mail"}
-async function run(){
-  if(busy)return;
-  showErr("");
-  const orig=$("orig").value.trim(), ctx=$("ctx").value.trim(), subj=$("subj").value.trim();
-  const mode=document.querySelector('input[name=mode]:checked').value;
-  if(!orig){showErr("Preencha o conteúdo do e-mail antes de continuar.");$("orig").focus();return}
-  setBusy(true);
-  try{
-    const resp=await fetch("/api/tratar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({assunto:subj,email:orig,contexto:ctx,modo:mode})});
-    const j=await resp.json().catch(()=>({}));
-    if(!resp.ok)throw {code:j.code||"server"};
-    if(typeof j.corpo!=="string"||!j.corpo.trim())throw {code:"server"};
-    $("rsubj").value=j.assunto||subj||"";
-    $("res").value=j.corpo.trim();
-    const w=Array.isArray(j.avisos)?j.avisos.filter(Boolean):[];
-    const wb=$("warn");
-    if(w.length){wb.innerHTML="<strong>Conferir antes de usar:</strong> "+w.map(x=>String(x).replace(/</g,"&lt;")).join(" · ");wb.classList.remove("hidden")}else wb.classList.add("hidden");
-    $("empty").classList.add("hidden");
-    const o=$("out");o.classList.remove("hidden");o.classList.remove("fade");void o.offsetWidth;o.classList.add("fade");
-    o.scrollIntoView({behavior:"smooth",block:"nearest"});
-  }catch(e){
-    const c=e&&e.code;
-    showErr(c==="not_configured"?"A integração com a IA não está configurada no servidor. Peça ao responsável técnico para definir a chave de API (ANTHROPIC_API_KEY).":
-      c==="rate_limited"?"Muitas solicitações em sequência. Aguarde alguns instantes e tente novamente.":
-      "Não foi possível concluir o tratamento agora. Tente novamente em alguns instantes."+(e&&e.code?" (detalhe: "+e.code+")":""));
-  }finally{setBusy(false)}
-}
-async function copy(text,btn){
-  if(!text){return}
-  let ok=false;
-  try{await navigator.clipboard.writeText(text);ok=true}catch(_){
-    const t=document.createElement("textarea");t.value=text;t.style.position="fixed";t.style.opacity="0";document.body.appendChild(t);t.select();
-    try{ok=document.execCommand("copy")}catch(_){}t.remove();
+
+const $ = id => document.getElementById(id);
+
+const EX = {
+  1: {
+    s: "",
+    o: "Oi, recebemos sua reclamação e vamos ver isso. Aguarde.",
+    m: "formalizar",
+    c: ""
+  },
+  3: {
+    s: "",
+    o: "Prezado consumidor, recebemos sua solicitacao e iremos analisar os documento enviado.",
+    m: "corrigir",
+    c: ""
+  },
+  4: {
+    s: "Andamento da solicitação",
+    o: "O consumidor pergunta se recebeu uma atualização sobre sua solicitação.",
+    m: "resposta",
+    c: "Ainda não temos uma atualização confirmada."
+  },
+  5: {
+    s: "",
+    o: "oi, sobre o protocolo 2025/004517, o valor de R$ 1.249,90 deve ser devolvido ate 12/03/2026 conforme falamos. manda os docs",
+    m: "formalizar",
+    c: ""
   }
-  const old=btn.textContent;btn.textContent=ok?"Copiado!":"Falha ao copiar";setTimeout(()=>btn.textContent=old,1600);
+};
+
+let busy = false;
+
+function showErr(text) {
+  const el = $("err");
+  el.textContent = text;
+  el.classList.toggle("hidden", !text);
 }
-$("go").onclick=run;$("again").onclick=run;
-$("cpT").onclick=e=>copy($("res").value,e.target);
-$("cpS").onclick=e=>copy($("rsubj").value,e.target);
-$("ed").onclick=()=>{$("res").focus()};
-$("clr").onclick=()=>{["subj","orig","ctx","rsubj","res"].forEach(i=>$(i).value="");showErr("");$("out").classList.add("hidden");$("empty").classList.remove("hidden");document.querySelector('input[name=mode][value=formalizar]').checked=true};
-document.querySelectorAll("[data-ex]").forEach(b=>b.onclick=()=>{const x=EX[b.dataset.ex];$("subj").value=x.s;$("orig").value=x.o;$("ctx").value=x.c;document.querySelector(`input[name=mode][value=${x.m}]`).checked=true;showErr("")});
+
+function setBusy(value) {
+  busy = value;
+  $("go").disabled = value;
+  $("again").disabled = value;
+  $("go").textContent = value ? "Tratando..." : "Tratar e-mail";
+}
+
+function corrigirTexto(texto) {
+  let t = texto.trim();
+
+  const correcoes = [
+    [/\bvc\b/gi, "você"],
+    [/\bvcs\b/gi, "vocês"],
+    [/\bpq\b/gi, "porque"],
+    [/\bq\b/gi, "que"],
+    [/\bnao\b/gi, "não"],
+    [/\bsolicitacao\b/gi, "solicitação"],
+    [/\bsolicitacoes\b/gi, "solicitações"],
+    [/\binformacao\b/gi, "informação"],
+    [/\binformacoes\b/gi, "informações"],
+    [/\bdocumento enviado\b/gi, "documentos enviados"],
+    [/\bdocumentos enviado\b/gi, "documentos enviados"],
+    [/\bate\b/gi, "até"],
+    [/\bestá sendo analisado\b/gi, "está em análise"],
+    [/\bobrigado desde ja\b/gi, "obrigado desde já"],
+    [/\bpor favor\b/gi, "por favor"]
+  ];
+
+  for (const [padrao, substituicao] of correcoes) {
+    t = t.replace(padrao, substituicao);
+  }
+
+  t = t
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/([,.!?])(?=\S)/g, "$1 ")
+    .replace(/([!?]){2,}/g, "$1")
+    .replace(/\.{2,}/g, ".")
+    .trim();
+
+  // Capitaliza o início das frases sem alterar o restante dos dados.
+  t = t.replace(
+    /(^|[.!?]\s+)([a-záàâãéêíóôõúç])/g,
+    (_, inicio, letra) => inicio + letra.toLocaleUpperCase("pt-BR")
+  );
+
+  if (t && !/[.!?]$/.test(t)) {
+    t += ".";
+  }
+
+  return t;
+}
+
+function formalizar(texto) {
+  let t = corrigirTexto(texto);
+
+  const trocas = [
+    [/\boi\b/gi, "Olá"],
+    [/\be aí\b/gi, "Como vai"],
+    [/\btá\b/gi, "está"],
+    [/\btô\b/gi, "estou"],
+    [/\bpra\b/gi, "para"],
+    [/\bpro\b/gi, "para o"],
+    [/\bmanda\b/gi, "encaminhe"],
+    [/\bmandar\b/gi, "encaminhar"],
+    [/\bme manda\b/gi, "por gentileza, encaminhe"],
+    [/\bme envie\b/gi, "encaminhe, por gentileza"],
+    [/\ba gente vai ver isso\b/gi, "a situação será analisada"],
+    [/\bvamos ver isso\b/gi, "a situação será analisada"],
+    [/\baguarde\b/gi, "pedimos que aguarde novas informações"],
+    [/\bvaleu\b/gi, "agradeço"],
+    [/\bobrigado pela ajuda\b/gi, "agradeço pela colaboração"]
+  ];
+
+  for (const [padrao, substituicao] of trocas) {
+    t = t.replace(padrao, substituicao);
+  }
+
+  return t;
+}
+
+function simplificar(texto) {
+  let t = corrigirTexto(texto);
+
+  const trocas = [
+    [/\bvenho por meio deste\b/gi, "escrevo para"],
+    [/\bsolicitamos a gentileza de\b/gi, "pedimos que"],
+    [/\bconforme supracitado\b/gi, "conforme mencionado"],
+    [/\bno que tange a\b/gi, "sobre"],
+    [/\bmediante o exposto\b/gi, "diante disso"],
+    [/\bpara que seja possível\b/gi, "para"],
+    [/\brealizar a verificação\b/gi, "verificar"]
+  ];
+
+  for (const [padrao, substituicao] of trocas) {
+    t = t.replace(padrao, substituicao);
+  }
+
+  return t;
+}
+
+function melhorarClareza(texto) {
+  let t = simplificar(texto);
+
+  t = t
+    .replace(/\s*;\s*/g, ". ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/,\s*e\b/gi, " e");
+
+  return t;
+}
+
+function tornarCordial(texto) {
+  let t = formalizar(texto);
+
+  if (!/^(olá|prezado|prezada|bom dia|boa tarde|boa noite)\b/i.test(t)) {
+    t = "Olá,\n\n" + t;
+  }
+
+  if (!/(agradeço|agradecemos|à disposição|a disposição)/i.test(t)) {
+    t += "\n\nAgradeço pela atenção.";
+  }
+
+  return t;
+}
+
+function resumir(texto) {
+  const t = melhorarClareza(texto);
+  const frases = t.match(/[^.!?\n]+[.!?]?/g) || [t];
+
+  if (frases.length <= 2) {
+    return t;
+  }
+
+  // Resumo simples: preserva as primeiras frases.
+  // Não equivale a um resumo feito por IA.
+  return frases.slice(0, 2).join(" ").trim();
+}
+
+function identificarAvisos(texto, contexto, modo) {
+  const avisos = [];
+  const t = texto.toLocaleLowerCase("pt-BR");
+  const c = contexto.toLocaleLowerCase("pt-BR");
+
+  if (!/(prezado|prezada|olá|bom dia|boa tarde|boa noite)\b/i.test(texto)) {
+    avisos.push("Confira se é necessário incluir uma saudação.");
+  }
+
+  if (texto.length < 40) {
+    avisos.push("Verifique se o contexto e as informações são suficientes.");
+  }
+
+  if (/\b(prazo|até dia|até o dia|data limite)\b/i.test(t) &&
+      !/\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/.test(texto)) {
+    avisos.push("Confira se o prazo mencionado está especificado.");
+  }
+
+  if (/\b(protocolo|pedido|solicitação|reclamação)\b/i.test(t) &&
+      !/\b\d{4,}\b/.test(texto)) {
+    avisos.push("Verifique se existe número de protocolo ou referência a informar.");
+  }
+
+  if (modo === "resposta" && !contexto.trim()) {
+    avisos.push("Informe o contexto da resposta para evitar informações inventadas.");
+  }
+
+  if (/\b(devolver|reembolsar|pagar|resolver|concluir|garantir)\b/i.test(t) &&
+      !/(confirmado|confirmada|autorizado|autorizada|aprovado|aprovada)/i.test(c)) {
+    avisos.push("Confirme se o procedimento ou compromisso mencionado está autorizado.");
+  }
+
+  if (!/(atenciosamente|cordialmente|à disposição|a disposição|agradeço)/i.test(texto)) {
+    avisos.push("Avalie incluir um encerramento profissional.");
+  }
+
+  return avisos;
+}
+
+function criarResposta(texto, contexto) {
+  const c = contexto.trim();
+
+  if (!c) {
+    return {
+      corpo:
+        "Olá,\n\nRecebemos sua mensagem e agradecemos o contato. " +
+        "Para elaborar uma resposta adequada, é necessário confirmar " +
+        "as informações sobre a solicitação.\n\nAtenciosamente,",
+      avisos: [
+        "Informe o contexto e os dados confirmados antes de enviar a resposta."
+      ]
+    };
+  }
+
+  return {
+    corpo:
+      "Olá,\n\nAgradecemos o contato.\n\n" +
+      "Em relação à sua solicitação, informamos o seguinte: " +
+      corrigirTexto(c) +
+      "\n\nPermanecemos à disposição para eventuais esclarecimentos.\n\n" +
+      "Atenciosamente,",
+    avisos: [
+      "Confira se o contexto informado responde à mensagem recebida.",
+      "Confirme os dados antes de enviar a resposta."
+    ]
+  };
+}
+
+function tratarLocal({ assunto, email, contexto, modo }) {
+  let corpo = "";
+  let avisos = [];
+
+  switch (modo) {
+    case "formalizar":
+      corpo = formalizar(email);
+      break;
+
+    case "simplificar":
+      corpo = simplificar(email);
+      break;
+
+    case "corrigir":
+      corpo = corrigirTexto(email);
+      break;
+
+    case "clareza":
+      corpo = melhorarClareza(email);
+      break;
+
+    case "cordial":
+      corpo = tornarCordial(email);
+      break;
+
+    case "resumir":
+      corpo = resumir(email);
+      break;
+
+    case "resposta": {
+      const resultado = criarResposta(email, contexto);
+      corpo = resultado.corpo;
+      avisos = resultado.avisos;
+      break;
+    }
+
+    default:
+      corpo = corrigirTexto(email);
+  }
+
+  avisos = [
+    ...avisos,
+    ...identificarAvisos(email, contexto, modo)
+  ];
+
+  let novoAssunto = assunto;
+
+  if (!novoAssunto && modo === "resposta") {
+    novoAssunto = "Resposta à sua solicitação";
+  }
+
+  if (!novoAssunto && modo === "formalizar") {
+    novoAssunto = "Mensagem institucional";
+  }
+
+  return {
+    assunto: novoAssunto,
+    corpo,
+    avisos: [...new Set(avisos)]
+  };
+}
+
+async function run() {
+  if (busy) return;
+
+  showErr("");
+
+  const assunto = $("subj").value.trim();
+  const email = $("orig").value.trim();
+  const contexto = $("ctx").value.trim();
+  const modo = document.querySelector(
+    'input[name="mode"]:checked'
+  ).value;
+
+  if (!email) {
+    showErr("Preencha o conteúdo do e-mail antes de continuar.");
+    $("orig").focus();
+    return;
+  }
+
+  setBusy(true);
+
+  try {
+    // Todo o processamento principal é feito localmente no navegador.
+    const resultado = tratarLocal({
+      assunto,
+      email,
+      contexto,
+      modo
+    });
+
+    $("rsubj").value = resultado.assunto;
+    $("res").value = resultado.corpo;
+
+    const warn = $("warn");
+    warn.replaceChildren();
+
+    if (resultado.avisos.length) {
+      const titulo = document.createElement("strong");
+      titulo.textContent = "Conferir antes de usar: ";
+      warn.appendChild(titulo);
+
+      warn.appendChild(
+        document.createTextNode(resultado.avisos.join(" · "))
+      );
+
+      warn.classList.remove("hidden");
+    } else {
+      warn.classList.add("hidden");
+    }
+
+    $("empty").classList.add("hidden");
+
+    const out = $("out");
+    out.classList.remove("hidden", "fade");
+    void out.offsetWidth;
+    out.classList.add("fade");
+
+    out.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest"
+    });
+  } catch (error) {
+    console.error(error);
+    showErr("Ocorreu um erro ao tratar o texto. Tente novamente.");
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function copy(text, button) {
+  if (!text) return;
+
+  let success = false;
+
+  try {
+    await navigator.clipboard.writeText(text);
+    success = true;
+  } catch (_) {
+    const temp = document.createElement("textarea");
+    temp.value = text;
+    temp.style.position = "fixed";
+    temp.style.opacity = "0";
+    document.body.appendChild(temp);
+    temp.select();
+
+    try {
+      success = document.execCommand("copy");
+    } catch (_) {}
+
+    temp.remove();
+  }
+
+  const original = button.textContent;
+  button.textContent = success ? "Copiado!" : "Falha ao copiar";
+
+  setTimeout(() => {
+    button.textContent = original;
+  }, 1600);
+}
+
+$("go").onclick = run;
+$("again").onclick = run;
+
+$("cpT").onclick = event => copy($("res").value, event.currentTarget);
+$("cpS").onclick = event => copy($("rsubj").value, event.currentTarget);
+
+$("ed").onclick = () => $("res").focus();
+
+$("clr").onclick = () => {
+  ["subj", "orig", "ctx", "rsubj", "res"].forEach(id => {
+    $(id).value = "";
+  });
+
+  showErr("");
+  $("out").classList.add("hidden");
+  $("empty").classList.remove("hidden");
+  $("warn").classList.add("hidden");
+
+  document.querySelector(
+    'input[name="mode"][value="formalizar"]'
+  ).checked = true;
+};
+
+document.querySelectorAll("[data-ex]").forEach(button => {
+  button.onclick = () => {
+    const exemplo = EX[button.dataset.ex];
+
+    $("subj").value = exemplo.s;
+    $("orig").value = exemplo.o;
+    $("ctx").value = exemplo.c;
+
+    document.querySelector(
+      `input[name="mode"][value="${exemplo.m}"]`
+    ).checked = true;
+
+    showErr("");
+  };
+});
+
 </script>
 </body>
 </html>
