@@ -1,0 +1,13 @@
+
+{
+  "name": "assistente-emails",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Assistente de e-mails com Gemini",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
