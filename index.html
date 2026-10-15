@@ -442,7 +442,7 @@ async function run() {
     // Todo o processamento principal é feito localmente no navegador.
 
 const apiResponse = await fetch(
-  "https://assistente-emails-api.onrender.com,
+  "https://assistente-emails-api.onrender.com/api/tratar",
   {
     method: "POST",
     headers: {
@@ -482,7 +482,7 @@ const resultado = await apiResponse.json();
     const warn = $("warn");
     warn.replaceChildren();
 
-    if (resultado.avisos.length) {
+    if (Array.isArray(resultado.avisos) && resultado.avisos.length > 0) {
       const titulo = document.createElement("strong");
       titulo.textContent = "Conferir antes de usar: ";
       warn.appendChild(titulo);
@@ -507,10 +507,10 @@ const resultado = await apiResponse.json();
       behavior: "smooth",
       block: "nearest"
     });
-  } catch (error) {
-    console.error(error);
-    showErr("Ocorreu um erro ao tratar o texto. Tente novamente.");
-  } finally {
+} catch (error) {
+  console.error(error);
+  showErr(error.message || "Ocorreu um erro ao tratar o texto.");
+} finally {
     setBusy(false);
   }
 }
