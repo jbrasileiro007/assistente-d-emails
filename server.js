@@ -141,14 +141,21 @@ ${email}
   );
 
   
+
 if (!response.ok) {
   const detalhe = await response.text();
 
   console.error("Erro Gemini HTTP:", response.status);
   console.error("Detalhes Gemini:", detalhe.slice(0, 1500));
 
+  let codigoGoogle = "";
+  try {
+    codigoGoogle = JSON.parse(detalhe)?.error?.status || "";
+  } catch {}
+
   const err = new Error("Falha na API do Gemini.");
   err.status = response.status;
+  err.googleStatus = codigoGoogle;
   throw err;
 }
 
@@ -245,24 +252,32 @@ const server = http.createServer(async (req, res) => {
     });
 
     return send(res, 200, result);
-  } catch (err) {
-    const status = err.status === 429
-      ? 429
-      : err.status === 400 || err.status === 413
-        ? err.status
-        : 502;
+  }   } catch (err) {
+    console.error("Falha no processamento:", err.status || "sem status");
 
-    console.error("Falha no processamento:", status);
+    if (
+      err.status === 503 ||
+      err.googleStatus === "UNAVAILABLE"
+    ) {
+      return send(res, 503, {
+        error: "gemini_unavailable",
+        message: "O Gemini está temporariamente sobrecarregado. Aguarde alguns instantes e tente novamente."
+      });
+    }
 
-    return send(res, status, {
-      error: status === 429
-        ? "rate_limited"
-        : status === 413
-          ? "text_too_large"
-          : status === 400
-            ? "invalid_request"
-            : "gemini_error"
-    });
+    if (err.status === 429) {
+      return send(res, 429, { error: "rate_limited" });
+    }
+
+    if (err.status === 413) {
+      return send(res, 413, { error: "text_too_large" });
+    }
+
+    if (err.status === 400) {
+      return send(res, 400, { error: "invalid_request" });
+    }
+
+    return send(res, 502, { error: "gemini_error" });
   }
 });
 
