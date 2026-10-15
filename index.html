@@ -467,11 +467,11 @@ if (!apiResponse.ok) {
     text_too_large: "O texto enviado é muito grande."
   };
 
-  throw new Error(
-    mensagens[dadosErro.error] ||
-    "Não foi possível processar o texto. Tente novamente."
-  );
-}
+throw new Error(
+  dadosErro.error
+    ? "Erro da API: " + dadosErro.error
+    : "Erro HTTP " + apiResponse.status
+);
 
 const resultado = await apiResponse.json();
 
